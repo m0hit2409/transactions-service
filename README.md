@@ -142,6 +142,10 @@ curl -s -X POST localhost:8080/transactions \
 # 201 -> {"transaction_id":2,"amount":"60", ...}
 ```
 
+A ready-to-import Postman collection covering all endpoints (happy paths and
+error cases) is available at
+[`docs/pismo.postman_collection.json`](docs/pismo.postman_collection.json).
+
 ### Operation types
 
 | ID | Description                | Sign |

@@ -1,0 +1,752 @@
+{
+  "info": {
+    "name": "Transactions Service",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "description": "Manages cardholder accounts and the transactions posted against them.\n\nPurchases and withdrawals are stored as negative amounts; credit vouchers are positive. The caller always sends a **positive** amount — the server applies the sign based on the operation type.\n\n## Quick start\n1. Start the service: `./run` (or `go run ./cmd/api`)\n2. Run **Create Account** — the test script stores the returned `account_id` in the `accountId` collection variable automatically.\n3. Run any **Create Transaction** request.\n\n## Operation types\n| ID | Description | Sign |\n|----|-------------|------|\n| 1  | Normal Purchase | − |\n| 2  | Purchase with installments | − |\n| 3  | Withdrawal | − |\n| 4  | Credit Voucher | + |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string",
+      "description": "Base URL of the running service"
+    },
+    {
+      "key": "accountId",
+      "value": "1",
+      "type": "string",
+      "description": "Set automatically by the Create Account test script"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Liveness probe. Returns `{\"status\":\"ok\"}` with a 200 when the service is up."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"status\": \"ok\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Body has status ok', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('ok');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "Create Account",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_number\": \"12345678900\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts"]
+            },
+            "description": "Creates a cardholder account. The `account_id` is saved into the `accountId` collection variable by the test script so subsequent requests use it automatically."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"document_number\": \"12345678900\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/accounts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["accounts"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"account_id\": 1,\n  \"document_number\": \"12345678900\",\n  \"is_active\": true,\n  \"created_at\": \"2026-06-18T10:00:00Z\"\n}"
+            },
+            {
+              "name": "400 Bad Request — malformed body",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {"mode": "raw", "raw": "{bad json"},
+                "url": {
+                  "raw": "{{baseUrl}}/accounts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["accounts"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"error\": \"invalid document number\"\n}"
+            },
+            {
+              "name": "409 Conflict — duplicate document number",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"document_number\": \"12345678900\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/accounts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["accounts"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"error\": \"account already exists\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "",
+                  "pm.test('Response has expected fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('account_id');",
+                  "    pm.expect(json).to.have.property('document_number');",
+                  "    pm.expect(json.is_active).to.be.true;",
+                  "});",
+                  "",
+                  "// Save account_id for use in downstream requests.",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('accountId', pm.response.json().account_id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Account — duplicate",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_number\": \"12345678900\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts"]
+            },
+            "description": "Sending the same document number a second time — expects a 409 Conflict."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Error message is correct', () => {",
+                  "    pm.expect(pm.response.json().error).to.include('already exists');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Account — empty document",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"document_number\": \"\"\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts"]
+            },
+            "description": "Empty document number — expects a 400 Bad Request."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/{{accountId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "{{accountId}}"]
+            },
+            "description": "Retrieves the account whose ID is stored in the `accountId` collection variable (set automatically by Create Account)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/accounts/1",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["accounts", "1"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"account_id\": 1,\n  \"document_number\": \"12345678900\",\n  \"is_active\": true,\n  \"created_at\": \"2026-06-18T10:00:00Z\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/accounts/99999",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["accounts", "99999"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"error\": \"account not found\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', () => pm.response.to.have.status(200));",
+                  "",
+                  "pm.test('Response has expected fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.account_id).to.eql(pm.collectionVariables.get('accountId') * 1);",
+                  "    pm.expect(json).to.have.property('document_number');",
+                  "    pm.expect(json).to.have.property('is_active');",
+                  "    pm.expect(json).to.have.property('created_at');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Account — not found",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/99999",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "99999"]
+            },
+            "description": "Account ID that does not exist — expects a 404."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error message is correct', () => {",
+                  "    pm.expect(pm.response.json().error).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Account — invalid id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/accounts/abc",
+              "host": ["{{baseUrl}}"],
+              "path": ["accounts", "abc"]
+            },
+            "description": "Non-numeric account ID — expects a 400."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Create Transaction — Normal Purchase",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{accountId}},\n  \"operation_type_id\": 1,\n  \"amount\": 123.45\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"]
+            },
+            "description": "Records a Normal Purchase (op type 1). The amount is sent positive; the server stores it as **−123.45**."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"account_id\": 1,\n  \"operation_type_id\": 1,\n  \"amount\": 123.45\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["transactions"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"transaction_id\": 1,\n  \"account_id\": 1,\n  \"operation_type_id\": 1,\n  \"amount\": \"-123.45\",\n  \"event_date\": \"2026-06-18T10:01:00Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "",
+                  "pm.test('Amount is stored as negative', () => {",
+                  "    const amount = parseFloat(pm.response.json().amount);",
+                  "    pm.expect(amount).to.be.below(0);",
+                  "});",
+                  "",
+                  "pm.test('Response has expected fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.all.keys('transaction_id', 'account_id', 'operation_type_id', 'amount', 'event_date');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transaction — Purchase with Installments",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{accountId}},\n  \"operation_type_id\": 2,\n  \"amount\": 500.00\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"]
+            },
+            "description": "Records a Purchase with Installments (op type 2). Amount is stored as **−500.00**."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Amount is stored as negative', () => {",
+                  "    pm.expect(parseFloat(pm.response.json().amount)).to.be.below(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transaction — Withdrawal",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{accountId}},\n  \"operation_type_id\": 3,\n  \"amount\": 200.00\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"]
+            },
+            "description": "Records a Withdrawal (op type 3). Amount is stored as **−200.00**."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Amount is stored as negative', () => {",
+                  "    pm.expect(parseFloat(pm.response.json().amount)).to.be.below(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transaction — Credit Voucher",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{accountId}},\n  \"operation_type_id\": 4,\n  \"amount\": 60.00\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"]
+            },
+            "description": "Records a Credit Voucher (op type 4). Amount is stored as **+60.00** (positive)."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"account_id\": 1,\n  \"operation_type_id\": 4,\n  \"amount\": 60\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["transactions"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"transaction_id\": 2,\n  \"account_id\": 1,\n  \"operation_type_id\": 4,\n  \"amount\": \"60\",\n  \"event_date\": \"2026-06-18T10:02:00Z\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 201', () => pm.response.to.have.status(201));",
+                  "",
+                  "pm.test('Amount is stored as positive', () => {",
+                  "    pm.expect(parseFloat(pm.response.json().amount)).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transaction — account not found",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": 99999,\n  \"operation_type_id\": 1,\n  \"amount\": 50\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"]
+            },
+            "description": "References a non-existent account — expects a 404."
+          },
+          "response": [
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"account_id\": 99999,\n  \"operation_type_id\": 1,\n  \"amount\": 50\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["transactions"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"error\": \"account not found\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Error message is correct', () => {",
+                  "    pm.expect(pm.response.json().error).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transaction — invalid operation type",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{accountId}},\n  \"operation_type_id\": 99,\n  \"amount\": 50\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"]
+            },
+            "description": "References an unknown operation type — expects a 422 Unprocessable Entity."
+          },
+          "response": [
+            {
+              "name": "422 Unprocessable Entity",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"account_id\": 1,\n  \"operation_type_id\": 99,\n  \"amount\": 50\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["transactions"]
+                }
+              },
+              "status": "Unprocessable Entity",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"error\": \"invalid operation type\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 422', () => pm.response.to.have.status(422));",
+                  "pm.test('Error message is correct', () => {",
+                  "    pm.expect(pm.response.json().error).to.include('operation type');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transaction — non-positive amount",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{accountId}},\n  \"operation_type_id\": 1,\n  \"amount\": -10\n}",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"]
+            },
+            "description": "Negative amount — callers must always send a positive magnitude. Expects a 400."
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{"key": "Content-Type", "value": "application/json"}],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"account_id\": 1,\n  \"operation_type_id\": 1,\n  \"amount\": -10\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["transactions"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{"key": "Content-Type", "value": "application/json"}],
+              "body": "{\n  \"error\": \"amount must be positive\"\n}"
+            }
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Error message mentions amount', () => {",
+                  "    pm.expect(pm.response.json().error).to.include('amount');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Transaction — malformed body",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{bad json",
+              "options": {"raw": {"language": "json"}}
+            },
+            "url": {
+              "raw": "{{baseUrl}}/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["transactions"]
+            },
+            "description": "Unparseable request body — expects a 400."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

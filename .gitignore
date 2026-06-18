@@ -1,0 +1,18 @@
+# Binaries
+/bin/
+api
+
+# Test / coverage output
+*.out
+coverage.*
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# Local env overrides
+.env.local
+
+# SQLite database files
+data/

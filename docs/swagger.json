@@ -1,0 +1,227 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "A small service that manages cardholder accounts and their transactions.\nPurchases and withdrawals are stored as negative amounts; credit vouchers as positive. The caller always sends a positive amount and the server applies the sign based on the operation type.",
+        "title": "Transactions Service API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/",
+    "paths": {
+        "/accounts": {
+            "post": {
+                "description": "Creates a cardholder account for the given document number.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Create an account",
+                "parameters": [
+                    {
+                        "description": "Account to create",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createAccountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_m0hit2409_transactions-service_internal_domain.Account"
+                        }
+                    },
+                    "400": {
+                        "description": "malformed body or empty document",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "document number already exists",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}": {
+            "get": {
+                "description": "Retrieves an account by its id.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get an account",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Account ID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_m0hit2409_transactions-service_internal_domain.Account"
+                        }
+                    },
+                    "400": {
+                        "description": "non-numeric id",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "account not found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/transactions": {
+            "post": {
+                "description": "Records a transaction against an account. The caller always sends a positive amount; the server applies the sign based on the operation type (purchases and withdrawals are stored negative, credit vouchers positive).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "transactions"
+                ],
+                "summary": "Create a transaction",
+                "parameters": [
+                    {
+                        "description": "Transaction to create",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.createTransactionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_m0hit2409_transactions-service_internal_domain.Transaction"
+                        }
+                    },
+                    "400": {
+                        "description": "malformed body or non-positive amount",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "account not found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "invalid operation type",
+                        "schema": {
+                            "$ref": "#/definitions/internal_handler.errorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_m0hit2409_transactions-service_internal_domain.Account": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "document_number": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_m0hit2409_transactions-service_internal_domain.Transaction": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "integer"
+                },
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "event_date": {
+                    "type": "string"
+                },
+                "operation_type_id": {
+                    "type": "integer"
+                },
+                "transaction_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_handler.createAccountRequest": {
+            "type": "object",
+            "properties": {
+                "document_number": {
+                    "type": "string",
+                    "example": "12345678900"
+                }
+            }
+        },
+        "internal_handler.createTransactionRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "amount": {
+                    "type": "number",
+                    "example": 123.45
+                },
+                "operation_type_id": {
+                    "type": "integer",
+                    "example": 4
+                }
+            }
+        },
+        "internal_handler.errorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

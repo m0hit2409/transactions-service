@@ -1,0 +1,153 @@
+basePath: /
+definitions:
+  github_com_m0hit2409_transactions-service_internal_domain.Account:
+    properties:
+      account_id:
+        type: integer
+      created_at:
+        type: string
+      document_number:
+        type: string
+      is_active:
+        type: boolean
+    type: object
+  github_com_m0hit2409_transactions-service_internal_domain.Transaction:
+    properties:
+      account_id:
+        type: integer
+      amount:
+        type: number
+      created_at:
+        type: string
+      event_date:
+        type: string
+      operation_type_id:
+        type: integer
+      transaction_id:
+        type: integer
+    type: object
+  internal_handler.createAccountRequest:
+    properties:
+      document_number:
+        example: "12345678900"
+        type: string
+    type: object
+  internal_handler.createTransactionRequest:
+    properties:
+      account_id:
+        example: 1
+        type: integer
+      amount:
+        example: 123.45
+        type: number
+      operation_type_id:
+        example: 4
+        type: integer
+    type: object
+  internal_handler.errorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: |-
+    A small service that manages cardholder accounts and their transactions.
+    Purchases and withdrawals are stored as negative amounts; credit vouchers as positive. The caller always sends a positive amount and the server applies the sign based on the operation type.
+  title: Transactions Service API
+  version: "1.0"
+paths:
+  /accounts:
+    post:
+      consumes:
+      - application/json
+      description: Creates a cardholder account for the given document number.
+      parameters:
+      - description: Account to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.createAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_m0hit2409_transactions-service_internal_domain.Account'
+        "400":
+          description: malformed body or empty document
+          schema:
+            $ref: '#/definitions/internal_handler.errorResponse'
+        "409":
+          description: document number already exists
+          schema:
+            $ref: '#/definitions/internal_handler.errorResponse'
+      summary: Create an account
+      tags:
+      - accounts
+  /accounts/{accountId}:
+    get:
+      description: Retrieves an account by its id.
+      parameters:
+      - description: Account ID
+        in: path
+        name: accountId
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_m0hit2409_transactions-service_internal_domain.Account'
+        "400":
+          description: non-numeric id
+          schema:
+            $ref: '#/definitions/internal_handler.errorResponse'
+        "404":
+          description: account not found
+          schema:
+            $ref: '#/definitions/internal_handler.errorResponse'
+      summary: Get an account
+      tags:
+      - accounts
+  /transactions:
+    post:
+      consumes:
+      - application/json
+      description: Records a transaction against an account. The caller always sends
+        a positive amount; the server applies the sign based on the operation type
+        (purchases and withdrawals are stored negative, credit vouchers positive).
+      parameters:
+      - description: Transaction to create
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler.createTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_m0hit2409_transactions-service_internal_domain.Transaction'
+        "400":
+          description: malformed body or non-positive amount
+          schema:
+            $ref: '#/definitions/internal_handler.errorResponse'
+        "404":
+          description: account not found
+          schema:
+            $ref: '#/definitions/internal_handler.errorResponse'
+        "422":
+          description: invalid operation type
+          schema:
+            $ref: '#/definitions/internal_handler.errorResponse'
+      summary: Create a transaction
+      tags:
+      - transactions
+swagger: "2.0"

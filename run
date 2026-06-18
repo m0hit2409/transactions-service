@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Builds the image and starts the API.  Pass any docker compose flags through.
+# Usage: ./run [docker compose flags]
+#   ./run          # build + start in the foreground
+#   ./run -d       # start in the background
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+docker compose up --build "$@"
